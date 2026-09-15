@@ -11,13 +11,11 @@ module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "private, no-store");
 
   if (req.method === "GET") {
-    let { household, etag } = await getHousehold(session.householdId);
+    let { household } = await getHousehold(session.householdId);
     if (!household) {
       household = createHouseholdData();
-      const blob = await saveHousehold(session.householdId, household);
-      etag = blob.etag;
+      await saveHousehold(session.householdId, household);
     }
-    res.setHeader("X-Data-Etag", etag);
     res.status(200).json(household);
     return;
   }
@@ -29,17 +27,8 @@ module.exports = async function handler(req, res) {
       return;
     }
     const household = { categories: body.categories, transactions: body.transactions };
-    const clientEtag = req.headers["x-data-etag"];
-
-    try {
-      const blob = await saveHousehold(session.householdId, household, clientEtag || undefined);
-      res.setHeader("X-Data-Etag", blob.etag);
-      res.status(200).json({ ok: true });
-    } catch (err) {
-      res.status(409).json({
-        error: "ほかの端末での変更と競合しました。画面を再読み込みしてからやり直してください",
-      });
-    }
+    await saveHousehold(session.householdId, household);
+    res.status(200).json({ ok: true });
     return;
   }
 

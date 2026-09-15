@@ -9,33 +9,23 @@
   }
 
   let data = { categories: [], transactions: [] };
-  let dataEtag = null;
 
   async function loadHouseholdFromServer() {
     const res = await fetch("/api/household");
     if (!res.ok) throw new Error("failed to load household data");
     data = await res.json();
-    dataEtag = res.headers.get("X-Data-Etag");
   }
 
   async function saveData() {
     try {
       const res = await fetch("/api/household", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "X-Data-Etag": dataEtag || "" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (res.status === 409) {
-        alert("ほかの端末での変更と競合しました。最新のデータを読み込み直します。");
-        await loadHouseholdFromServer();
-        renderAll();
-        return;
-      }
       if (!res.ok) {
         alert("保存に失敗しました。通信環境を確認してください。");
-        return;
       }
-      dataEtag = res.headers.get("X-Data-Etag");
     } catch (e) {
       alert("保存に失敗しました。通信環境を確認してください。");
     }
