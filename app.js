@@ -194,6 +194,8 @@
       }
       inviteCodeDisplayEl.textContent = body.code;
       inviteCodeDisplayEl.hidden = false;
+    } catch (e) {
+      alert("通信エラーが発生しました。もう一度お試しください。");
     } finally {
       inviteCreateBtn.disabled = false;
     }
@@ -205,31 +207,39 @@
     if (!code) return;
 
     const previousData = JSON.parse(JSON.stringify(data));
+    const submitBtn = inviteRedeemForm.querySelector("button[type='submit']");
+    submitBtn.disabled = true;
 
-    const res = await fetch("/api/invite-redeem", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
-    });
-    const body = await res.json();
-    if (!res.ok) {
-      alert(body.error || "参加に失敗しました");
-      return;
-    }
-
-    await loadHouseholdFromServer();
-
-    if (previousData.transactions.length > 0) {
-      if (confirm(`参加しました。これまでのあなたのデータ(${previousData.transactions.length}件)を、この共有の家計簿に取り込みますか?`)) {
-        mergeHouseholdData(previousData);
-        await saveData();
+    try {
+      const res = await fetch("/api/invite-redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        alert(body.error || "参加に失敗しました");
+        return;
       }
-    } else {
-      alert("参加しました。");
-    }
 
-    inviteCodeInput.value = "";
-    renderAll();
+      await loadHouseholdFromServer();
+
+      if (previousData.transactions.length > 0) {
+        if (confirm(`参加しました。これまでのあなたのデータ(${previousData.transactions.length}件)を、この共有の家計簿に取り込みますか?`)) {
+          mergeHouseholdData(previousData);
+          await saveData();
+        }
+      } else {
+        alert("参加しました。");
+      }
+
+      inviteCodeInput.value = "";
+      renderAll();
+    } catch (e) {
+      alert("通信エラーが発生しました。もう一度お試しください。");
+    } finally {
+      submitBtn.disabled = false;
+    }
   });
 
   // ---------------------------------------------------------------------
@@ -348,7 +358,7 @@
 
     const catEl = document.createElement("div");
     catEl.className = "tx-cat";
-    catEl.innerHTML = `${categoryName(t.categoryId)} &gt; ${subcategoryName(t.categoryId, t.subcategoryId)}` +
+    catEl.innerHTML = `${escapeHtml(categoryName(t.categoryId))} &gt; ${escapeHtml(subcategoryName(t.categoryId, t.subcategoryId))}` +
       (t.memo ? `<span class="tx-memo">${escapeHtml(t.memo)}</span>` : "");
     row.appendChild(catEl);
 
