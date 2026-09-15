@@ -1,59 +1,61 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "kakeibo-data";
-
-  const DEFAULT_DATA = {
-    categories: [
-      { id: "food", name: "食費", subcategories: [
-        { id: "food-eatout", name: "外食" },
-        { id: "food-market", name: "スーパー" },
-        { id: "food-cafe", name: "カフェ" },
-      ]},
-      { id: "daily", name: "日用品", subcategories: [
-        { id: "daily-misc", name: "雑貨" },
-      ]},
-      { id: "house", name: "住居費", subcategories: [
-        { id: "house-rent", name: "家賃" },
-        { id: "house-utility", name: "光熱費" },
-      ]},
-      { id: "transport", name: "交通費", subcategories: [
-        { id: "transport-train", name: "電車・バス" },
-      ]},
-      { id: "income", name: "収入", subcategories: [
-        { id: "income-salary", name: "給与" },
-        { id: "income-other", name: "その他収入" },
-      ]},
-      { id: "other", name: "その他", subcategories: [
-        { id: "other-misc", name: "雑費" },
-      ]},
-    ],
-    transactions: [],
-  };
+  const LEGACY_STORAGE_KEY = "kakeibo-data";
 
   function uid() {
     if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
     return "id-" + Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
   }
 
-  function loadData() {
-    let raw;
+  let data = { categories: [], transactions: [] };
+  let dataEtag = null;
+
+  async function loadHouseholdFromServer() {
+    const res = await fetch("/api/household");
+    if (!res.ok) throw new Error("failed to load household data");
+    data = await res.json();
+    dataEtag = res.headers.get("X-Data-Etag");
+  }
+
+  async function saveData() {
     try {
-      raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      const res = await fetch("/api/household", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "X-Data-Etag": dataEtag || "" },
+        body: JSON.stringify(data),
+      });
+      if (res.status === 409) {
+        alert("ほかの端末での変更と競合しました。最新のデータを読み込み直します。");
+        await loadHouseholdFromServer();
+        renderAll();
+        return;
+      }
+      if (!res.ok) {
+        alert("保存に失敗しました。通信環境を確認してください。");
+        return;
+      }
+      dataEtag = res.headers.get("X-Data-Etag");
     } catch (e) {
-      raw = null;
+      alert("保存に失敗しました。通信環境を確認してください。");
     }
-    if (!raw || !Array.isArray(raw.categories) || !Array.isArray(raw.transactions)) {
-      return structuredClone(DEFAULT_DATA);
-    }
-    return raw;
   }
 
-  function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  function mergeHouseholdData(oldData) {
+    oldData.categories.forEach((oldCat) => {
+      const existing = data.categories.find((c) => c.id === oldCat.id);
+      if (existing) {
+        oldCat.subcategories.forEach((oldSub) => {
+          if (!existing.subcategories.find((s) => s.id === oldSub.id)) {
+            existing.subcategories.push(oldSub);
+          }
+        });
+      } else {
+        data.categories.push(oldCat);
+      }
+    });
+    data.transactions = data.transactions.concat(oldData.transactions);
   }
-
-  let data = loadData();
 
   function findCategory(categoryId) {
     return data.categories.find((c) => c.id === categoryId) || null;
@@ -92,6 +94,154 @@
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   }
 
+  function renderAll() {
+    renderCategoryChips();
+    renderSubcategoryChips();
+    renderRecent();
+    renderHistory();
+    renderCategoriesView();
+  }
+
+  // ---------------------------------------------------------------------
+  // 認証画面
+  // ---------------------------------------------------------------------
+
+  const authScreenEl = document.getElementById("auth-screen");
+  const appRootEl = document.getElementById("app-root");
+  const authModeToggleEl = document.getElementById("auth-mode-toggle");
+  const authFormEl = document.getElementById("auth-form");
+  const authEmailInput = document.getElementById("auth-email");
+  const authPasswordInput = document.getElementById("auth-password");
+  const authErrorEl = document.getElementById("auth-error");
+  const authSubmitBtn = document.getElementById("auth-submit");
+  const accountEmailEl = document.getElementById("account-email");
+
+  let authMode = "login";
+
+  authModeToggleEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".seg-btn");
+    if (!btn) return;
+    authMode = btn.dataset.mode;
+    authModeToggleEl.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
+    authSubmitBtn.textContent = authMode === "signup" ? "アカウントを作成" : "ログイン";
+    authPasswordInput.autocomplete = authMode === "signup" ? "new-password" : "current-password";
+    authErrorEl.hidden = true;
+  });
+
+  authFormEl.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    authErrorEl.hidden = true;
+    authSubmitBtn.disabled = true;
+    try {
+      const res = await fetch(authMode === "signup" ? "/api/signup" : "/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: authEmailInput.value, password: authPasswordInput.value }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        authErrorEl.textContent = body.error || "エラーが発生しました";
+        authErrorEl.hidden = false;
+        return;
+      }
+      authPasswordInput.value = "";
+      await enterApp(body.email);
+    } catch (err) {
+      authErrorEl.textContent = "通信エラーが発生しました";
+      authErrorEl.hidden = false;
+    } finally {
+      authSubmitBtn.disabled = false;
+    }
+  });
+
+  async function enterApp(email) {
+    accountEmailEl.textContent = email;
+    await loadHouseholdFromServer();
+
+    if (data.transactions.length === 0) {
+      let legacy = null;
+      try {
+        legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY));
+      } catch (e) {
+        legacy = null;
+      }
+      if (legacy && Array.isArray(legacy.transactions) && legacy.transactions.length > 0) {
+        if (confirm(`この端末に以前入力した家計簿データ(${legacy.transactions.length}件)があります。取り込みますか?`)) {
+          mergeHouseholdData(legacy);
+          await saveData();
+        }
+      }
+    }
+
+    authScreenEl.hidden = true;
+    appRootEl.hidden = false;
+    entryDateInput.value = todayISO();
+    renderAll();
+  }
+
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    await fetch("/api/logout", { method: "POST" });
+    location.reload();
+  });
+
+  // ---------------------------------------------------------------------
+  // 招待(共有)
+  // ---------------------------------------------------------------------
+
+  const inviteCreateBtn = document.getElementById("invite-create-btn");
+  const inviteCodeDisplayEl = document.getElementById("invite-code-display");
+  const inviteRedeemForm = document.getElementById("invite-redeem-form");
+  const inviteCodeInput = document.getElementById("invite-code-input");
+
+  inviteCreateBtn.addEventListener("click", async () => {
+    inviteCreateBtn.disabled = true;
+    try {
+      const res = await fetch("/api/invite-create", { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) {
+        alert(body.error || "招待コードの発行に失敗しました");
+        return;
+      }
+      inviteCodeDisplayEl.textContent = body.code;
+      inviteCodeDisplayEl.hidden = false;
+    } finally {
+      inviteCreateBtn.disabled = false;
+    }
+  });
+
+  inviteRedeemForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const code = inviteCodeInput.value.trim();
+    if (!code) return;
+
+    const previousData = JSON.parse(JSON.stringify(data));
+
+    const res = await fetch("/api/invite-redeem", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      alert(body.error || "参加に失敗しました");
+      return;
+    }
+
+    await loadHouseholdFromServer();
+
+    if (previousData.transactions.length > 0) {
+      if (confirm(`参加しました。これまでのあなたのデータ(${previousData.transactions.length}件)を、この共有の家計簿に取り込みますか?`)) {
+        mergeHouseholdData(previousData);
+        await saveData();
+      }
+    } else {
+      alert("参加しました。");
+    }
+
+    inviteCodeInput.value = "";
+    renderAll();
+  });
+
   // ---------------------------------------------------------------------
   // Navigation
   // ---------------------------------------------------------------------
@@ -125,11 +275,9 @@
 
   const entryState = {
     type: "expense",
-    categoryId: data.categories[0] ? data.categories[0].id : null,
+    categoryId: null,
     subcategoryId: null,
   };
-
-  entryDateInput.value = todayISO();
 
   typeToggleEl.addEventListener("click", (e) => {
     const btn = e.target.closest(".seg-btn");
@@ -343,7 +491,7 @@
   const addSubcategoryForm = document.getElementById("add-subcategory-form");
   const newSubcategoryNameInput = document.getElementById("new-subcategory-name");
 
-  let selectedCategoryIdForSettings = data.categories[0] ? data.categories[0].id : null;
+  let selectedCategoryIdForSettings = null;
 
   function renderCategoriesView() {
     categoryListEl.innerHTML = "";
@@ -442,12 +590,18 @@
   });
 
   // ---------------------------------------------------------------------
-  // Init
+  // Bootstrap
   // ---------------------------------------------------------------------
 
-  renderCategoryChips();
-  renderSubcategoryChips();
-  renderRecent();
-  renderHistory();
-  renderCategoriesView();
+  (async () => {
+    try {
+      const res = await fetch("/api/me");
+      if (res.ok) {
+        const body = await res.json();
+        await enterApp(body.email);
+      }
+    } catch (e) {
+      // stay on the auth screen if the check fails
+    }
+  })();
 })();

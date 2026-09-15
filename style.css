@@ -485,4 +485,116 @@ h1 {
   .btn-primary { width: 100%; text-align: center; }
 
   .tx-cat { font-size: 13px; }
+
+  .auth-card { width: 100%; max-width: 360px; padding: 28px 22px; }
+}
+
+/* Auth screen */
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card-bg);
+  border-radius: 22px;
+  padding: 36px 32px;
+  box-shadow: 0 6px 24px rgba(79, 138, 99, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-logo {
+  justify-content: center;
+  padding: 0;
+  font-size: 18px;
+}
+
+.auth-mode-toggle { align-self: center; }
+.seg-auth { padding: 9px 22px; }
+.seg-auth.active { background: var(--primary); color: #fff; }
+
+#auth-form { display: flex; flex-direction: column; gap: 12px; }
+
+.auth-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 13px 16px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.auth-error {
+  font-size: 13px;
+  color: var(--expense);
+  background: rgba(227, 143, 134, 0.12);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.auth-submit { width: 100%; text-align: center; margin-top: 4px; }
+
+/* Account / invite */
+.account-card { margin-top: 18px; }
+
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.account-email { font-size: 14px; font-weight: 700; margin-top: 4px; }
+
+.btn-outline {
+  border: 1.4px solid var(--primary);
+  color: var(--primary-dark);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 20px;
+  border-radius: 100px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-outline:hover { background: var(--primary-light); }
+
+.invite-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.invite-block .card-subtitle { margin-top: 4px; margin-bottom: 12px; }
+
+.invite-code-display {
+  margin-top: 12px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--primary-dark);
+  background: var(--primary-light);
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: inline-block;
+}
+
+@media (max-width: 700px) {
+  .invite-grid { grid-template-columns: 1fr; gap: 20px; }
+  .account-row { flex-direction: column; align-items: flex-start; }
 }

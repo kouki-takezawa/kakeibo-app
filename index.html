@@ -7,7 +7,31 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app">
+
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-card">
+    <div class="logo auth-logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7c0-1.1.9-2 2-2h11l4 4v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M16 12a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/></svg>
+      </div>
+      <span>かけいぼ</span>
+    </div>
+
+    <div class="segmented auth-mode-toggle" id="auth-mode-toggle">
+      <button type="button" class="seg-btn seg-auth active" data-mode="login">ログイン</button>
+      <button type="button" class="seg-btn seg-auth" data-mode="signup">新規登録</button>
+    </div>
+
+    <form id="auth-form">
+      <input type="email" id="auth-email" class="auth-input" placeholder="メールアドレス" autocomplete="email" required>
+      <input type="password" id="auth-password" class="auth-input" placeholder="パスワード(8文字以上)" autocomplete="current-password" minlength="8" required>
+      <div id="auth-error" class="auth-error" hidden></div>
+      <button type="submit" class="btn-primary auth-submit" id="auth-submit">ログイン</button>
+    </form>
+  </div>
+</div>
+
+<div class="app" id="app-root" hidden>
 
   <nav class="sidebar">
     <div class="logo">
@@ -146,6 +170,36 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
             </button>
           </form>
+        </div>
+      </div>
+
+      <div class="card account-card">
+        <div class="card-title">アカウント・共有</div>
+
+        <div class="account-row">
+          <div>
+            <div class="field-label">ログイン中のメールアドレス</div>
+            <div id="account-email" class="account-email"></div>
+          </div>
+          <button type="button" id="logout-btn" class="btn-outline">ログアウト</button>
+        </div>
+
+        <div class="invite-grid">
+          <div class="invite-block">
+            <div class="field-label">パートナーを招待する</div>
+            <p class="card-subtitle">招待コードを発行し、パートナーにお伝えください(有効期限24時間)。相手がコードを入力すると、あなたと同じ家計簿を共有できます。</p>
+            <button type="button" id="invite-create-btn" class="btn-outline">招待コードを発行</button>
+            <div id="invite-code-display" class="invite-code-display" hidden></div>
+          </div>
+
+          <div class="invite-block">
+            <div class="field-label">招待コードを持っている場合</div>
+            <p class="card-subtitle">パートナーから受け取った招待コードを入力すると、その世帯の家計簿に参加します(今のあなたのデータは表示されなくなりますが、消えはしません)。</p>
+            <form id="invite-redeem-form" class="add-row narrow">
+              <input type="text" id="invite-code-input" placeholder="招待コード" maxlength="8">
+              <button type="submit" class="btn-outline">参加する</button>
+            </form>
+          </div>
         </div>
       </div>
     </section>

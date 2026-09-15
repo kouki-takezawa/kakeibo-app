@@ -1,0 +1,7 @@
+{
+  "name": "kakeibo-app",
+  "private": true,
+  "dependencies": {
+    "@vercel/blob": "^2.3.0"
+  }
+}
