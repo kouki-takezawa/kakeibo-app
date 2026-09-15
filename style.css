@@ -28,6 +28,10 @@ html, body {
   min-height: 100vh;
 }
 
+.app[hidden] {
+  display: none;
+}
+
 /* Sidebar */
 .sidebar {
   width: 216px;
@@ -490,6 +494,10 @@ h1 {
 }
 
 /* Auth screen */
+.auth-screen[hidden] {
+  display: none;
+}
+
 .auth-screen {
   min-height: 100vh;
   display: flex;
@@ -581,6 +589,10 @@ h1 {
 }
 
 .invite-block .card-subtitle { margin-top: 4px; margin-bottom: 12px; }
+
+.invite-code-display[hidden] {
+  display: none;
+}
 
 .invite-code-display {
   margin-top: 12px;
