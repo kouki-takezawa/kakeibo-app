@@ -327,30 +327,7 @@
     const sortedTx = [...monthTx].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
     txRowsEl.innerHTML = "";
     txEmptyEl.hidden = sortedTx.length > 0;
-    sortedTx.forEach((t) => {
-      const row = document.createElement("div");
-      row.className = "tx-row";
-      const [, m, d] = t.date.split("-");
-      row.innerHTML = `
-        <div class="tx-col-date">${Number(m)}/${Number(d)}</div>
-        <div class="tx-col-cat">${escapeHtml(categoryName(t.categoryId))} &gt; ${escapeHtml(subcategoryName(t.categoryId, t.subcategoryId))}</div>
-        <div class="tx-col-memo">${escapeHtml(t.memo || "")}</div>
-        <div class="tx-col-amount tx-amount ${t.type}">${t.type === "expense" ? "-" : "+"}${yen(t.amount)}</div>
-        <div class="tx-col-action"></div>
-      `;
-      const delBtn = document.createElement("button");
-      delBtn.className = "delete-btn";
-      delBtn.title = "削除";
-      delBtn.innerHTML = trashIcon();
-      delBtn.addEventListener("click", () => {
-        data.transactions = data.transactions.filter((x) => x.id !== t.id);
-        saveData();
-        renderHistory();
-        renderRecent();
-      });
-      row.querySelector(".tx-col-action").appendChild(delBtn);
-      txRowsEl.appendChild(row);
-    });
+    sortedTx.forEach((t) => txRowsEl.appendChild(buildTxRow(t, { showAction: true })));
   }
 
   // ---------------------------------------------------------------------
